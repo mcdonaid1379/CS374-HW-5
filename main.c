@@ -50,7 +50,6 @@ struct Command *get_command () {
     token = strtok(input, delim);
     fprintf(log_file, "first token read\n");
 
-    /*FIXME: does not currently deal with the \n char for the last token*/
     /*iterates through all tokens*/
     while (token != NULL){
         if (strcmp(token, "<") == 0){
@@ -169,6 +168,38 @@ void run_built_in_command (struct Command *cmd) {
     return;
 }
 
+int exec_fore (struct Command *cmd){
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        /*fork failure*/
+        fprintf(log_file, "Fork failed");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        /*Child process*/ 
+        /*Constructing the argument list for execvp*/ 
+        char *args[cmd.args_counter + 2]; /*+2 for the command and NULL terminator*/ 
+        args[0] = cmd.command;
+        for (int i = 0; i < cmd.args_counter; i++) {
+            args[i + 1] = cmd.args[i];
+        }
+        args[cmd.args_counter + 1] = NULL;
+
+        execvp(cmd.command, args);
+
+        /*If execvp returns, it means there was an error*/ 
+        fprintf(log_file, "Exec failed");
+        exit(EXIT_FAILURE);
+    } else {
+        /*Parent process*/ 
+        int status;
+        /*Waiting for the child process to finish*/ 
+        waitpid(pid, &status, 0);
+    }
+
+}
+
+
 int run_command (struct Command *cmd){
     fprintf(log_file, "\n\nrunning command: %s\n", cmd->command);
     int exit_status = 0;
@@ -176,6 +207,16 @@ int run_command (struct Command *cmd){
     /*check for built in commands*/
     if (strcmp(cmd->command, "cd") == 0 || strcmp(cmd->command, "exit") == 0 || strcmp(cmd->command, "status") == 0) {
         run_built_in_command(cmd);
+        exit_status = 0;
+    } else if (cmd->background == 0){
+        /*run command in foreground*/
+        exit_status = exec_fore(cmd);
+
+    } else if (cmd->background == 1){
+        /*run command in background*/
+
+    } else {
+        printf("Error running command\n")
     }
     
     return exit_status;
@@ -191,10 +232,8 @@ void cmd () {
         /*run the command*/
         exit_status = run_command(cmd);
     }
-    /*TODO: add handle exit properly*/
 
     return;
-    
 }
 
 void init_log_file(){
