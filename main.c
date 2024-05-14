@@ -21,6 +21,14 @@ void log_Command (struct Command *c){
 
 }
 
+void remove_newline(char *str) {
+        int len = strlen(str);
+    if (len > 0 && str[len - 1] == '\n') {
+        str[len - 1] = '\0';
+    }
+}
+
+
 struct Command *get_command () {
     char input[MAX_LENGTH];
     char *token;
@@ -36,6 +44,7 @@ struct Command *get_command () {
     
     /*get command line input*/
     fgets(input, MAX_LENGTH, stdin);
+    remove_newline(input);
 
     /*get first token*/
     token = strtok(input, delim);
@@ -135,48 +144,38 @@ struct Command *get_command () {
         
     }
 
-
-    /*FIXME: Remove newline character from end of last token*/
-    /* After the while loop */
-    if (line->args_counter > 0 && line->args[line->args_counter - 1][strlen(line->args[line->args_counter - 1]) - 1] == '\n') {
-    /* Remove the newline character */
-        line->args[line->args_counter - 1][strlen(line->args[line->args_counter - 1]) - 1] = '\0';
-    }
-
     log_Command(line);
 
     return line;
 }
 
-int exit_smallsh () {
+void exit_smallsh () {
     /*TODO: Kill all other processes*/
     fprintf(log_file, "exit called\n");
-    return 1;
+    exit(0);
 }
 
-int run_built_in_command (struct Command *cmd) {
+void run_built_in_command (struct Command *cmd) {
     fprintf(log_file, "running built in command: %s\n", cmd->command);
-    int exit_status;
 
     if (strcmp(cmd->command, "cd") == 0){
         /*TODO: run cd*/
     } else if (strcmp(cmd->command, "exit") == 0){
-        exit_status =  exit_smallsh();
+        exit_smallsh();
     } else if (strcmp(cmd->command, "status") == 0){
         /*TODO: run status*/
     }
 
-    /*FIXME: fix return value*/
-    return exit_status;
+    return;
 }
 
 int run_command (struct Command *cmd){
     fprintf(log_file, "\n\nrunning command: %s\n", cmd->command);
-    int exit_status;
+    int exit_status = 0;
 
     /*check for built in commands*/
     if (strcmp(cmd->command, "cd") == 0 || strcmp(cmd->command, "exit") == 0 || strcmp(cmd->command, "status") == 0) {
-        exit_status = run_built_in_command(cmd);
+        run_built_in_command(cmd);
     }
     
     return exit_status;
