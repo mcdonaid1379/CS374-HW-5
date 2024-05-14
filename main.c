@@ -154,6 +154,7 @@ struct Command *get_command () {
 
 void exit_smallsh () {
     /*TODO: Kill all other processes*/
+    /*TODO: fix exit needing to be called twice*/
     fprintf(log_file, "exit called\n");
     exit(0);
 }
@@ -212,6 +213,44 @@ void exec_fore (struct Command *cmd){
 
 }
 
+void exec_back (struct Command *cmd){
+    int i;
+    exit_status = 0;
+
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        /*fork failure*/
+        fprintf(log_file, "Fork failed");
+        exit_status = 1;
+    } else if (pid == 0) {
+        /*Child process*/ 
+        /*outputting pid*/
+        pid_t current_pid = getpid();
+        printf("Background Process PID: %d\n", current_pid);
+        fflush(stdout);
+        /*Constructing the argument list for execvp*/ 
+        char *args[cmd->args_counter + 2]; /*+2 for the command and NULL terminator*/ 
+        args[0] = cmd->command;
+        for (i = 0; i < cmd->args_counter; i++) {
+            args[i + 1] = cmd->args[i];
+        }
+        args[cmd->args_counter + 1] = NULL;
+
+        execvp(cmd->command, args);
+
+        /*If execvp returns, it means there was an error*/ 
+        fprintf(log_file, "Exec failed");
+        exit_status = 1;
+    } else {
+        /*Parent process*/ 
+        int status;
+        /*Waiting for the child process to finish*/ 
+        waitpid(pid, &status, 0);
+    }
+
+}
+
 
 void run_command (struct Command *cmd){
     fprintf(log_file, "\n\nrunning command: %s\n", cmd->command);
@@ -219,7 +258,6 @@ void run_command (struct Command *cmd){
     /*check for built in commands*/
     if (strcmp(cmd->command, "cd") == 0 || strcmp(cmd->command, "exit") == 0 || strcmp(cmd->command, "status") == 0) {
         run_built_in_command(cmd);
-        exit_status = 0;
     } else if (cmd->background == 0){
         /*run command in foreground*/
         exec_fore(cmd);
