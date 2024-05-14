@@ -38,10 +38,11 @@ struct Command *get_command () {
     struct Command *line = (struct Command *)malloc(sizeof(struct Command));
     line->args_counter = 0;
     line->background = 0;
-    fprintf(log_file, "command for line struct memory allocated successfully and default values set\n");
+    fprintf(log_file, "\n\ncommand for line struct memory allocated successfully and default values set\n");
 
 
     printf(": ");
+    fflush(stdout);
     
     /*get command line input*/
     fgets(input, MAX_LENGTH, stdin);
@@ -66,6 +67,7 @@ struct Command *get_command () {
             /*checks if the file exists*/
             if (line->input_file == NULL){
                 printf("cannot open %s for input\n", token);
+                fflush(stdout);
             } else {
                 fprintf(log_file, "File %s successfully opened\n", line->input_name);
             }
@@ -89,6 +91,7 @@ struct Command *get_command () {
             /*checks if the file exists*/
             if (line->output_file == NULL){
                 printf("cannot open %s for output\n", token);
+                fflush(stdout);
             } else {
                 fprintf(log_file, "File %s successfully opened\n", line->output_name);
             }
@@ -155,6 +158,12 @@ void exit_smallsh () {
     exit(0);
 }
 
+void status () {
+    printf("exit value %d\n", exit_status);
+    fflush(stdout);
+    return;
+}
+
 void run_built_in_command (struct Command *cmd) {
     fprintf(log_file, "running built in command: %s\n", cmd->command);
 
@@ -163,21 +172,22 @@ void run_built_in_command (struct Command *cmd) {
     } else if (strcmp(cmd->command, "exit") == 0){
         exit_smallsh();
     } else if (strcmp(cmd->command, "status") == 0){
-        /*TODO: run status*/
+        status();
     }
 
     return;
 }
 
-int exec_fore (struct Command *cmd){
+void exec_fore (struct Command *cmd){
     int i;
+    exit_status = 0;
 
     pid_t pid = fork();
 
     if (pid < 0) {
         /*fork failure*/
         fprintf(log_file, "Fork failed");
-        exit(EXIT_FAILURE);
+        exit_status = 1;
     } else if (pid == 0) {
         /*Child process*/ 
         /*Constructing the argument list for execvp*/ 
@@ -192,9 +202,8 @@ int exec_fore (struct Command *cmd){
 
         /*If execvp returns, it means there was an error*/ 
         fprintf(log_file, "Exec failed");
-        exit(EXIT_FAILURE);
+        exit_status = 1;
     } else {
-        if
         /*Parent process*/ 
         int status;
         /*Waiting for the child process to finish*/ 
@@ -206,7 +215,6 @@ int exec_fore (struct Command *cmd){
 
 void run_command (struct Command *cmd){
     fprintf(log_file, "\n\nrunning command: %s\n", cmd->command);
-    int exit_status = 0;
 
     /*check for built in commands*/
     if (strcmp(cmd->command, "cd") == 0 || strcmp(cmd->command, "exit") == 0 || strcmp(cmd->command, "status") == 0) {
@@ -214,19 +222,21 @@ void run_command (struct Command *cmd){
         exit_status = 0;
     } else if (cmd->background == 0){
         /*run command in foreground*/
-        exit_status = exec_fore(cmd);
+        exec_fore(cmd);
 
     } else if (cmd->background == 1){
         /*run command in background*/
 
     } else {
         printf("Error running command\n");
+        fflush(stdout);
     }
     
-    return exit_status;
+    return;
 }
 
 void cmd () {
+    exit_status = 0;
     
     while (1 < 2){
         /*Get the command*/
@@ -244,6 +254,7 @@ void init_log_file(){
     log_file = fopen("logfile.txt", "w");
     if (log_file == NULL) {
         printf("Error opening log file!\n");
+        fflush(stdout);
         return;
     }
 
@@ -255,6 +266,7 @@ int main () {
     init_log_file();
     
     printf("$ smallsh\n");
+    fflush(stdout);
 
     cmd();
     return 0;
