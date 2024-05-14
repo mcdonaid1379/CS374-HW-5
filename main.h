@@ -38,7 +38,7 @@ void exit_smallsh ();
 void run_built_in_command (struct Command *cmd);
 int exec_fore (struct Command *cmd);
 int exec_back (struct Command *cmd);
-int run_command (struct Command *cmd);
+void run_command (struct Command *cmd);
 void cmd ();
 void init_log_file();
 int main ();

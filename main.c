@@ -2,6 +2,7 @@
 
 /*log file created globally as it will be needed in every function*/
 FILE *log_file;
+int exit_status;
 
 void log_Command (struct Command *c){
     int i;
@@ -169,6 +170,8 @@ void run_built_in_command (struct Command *cmd) {
 }
 
 int exec_fore (struct Command *cmd){
+    int i;
+
     pid_t pid = fork();
 
     if (pid < 0) {
@@ -178,19 +181,20 @@ int exec_fore (struct Command *cmd){
     } else if (pid == 0) {
         /*Child process*/ 
         /*Constructing the argument list for execvp*/ 
-        char *args[cmd.args_counter + 2]; /*+2 for the command and NULL terminator*/ 
-        args[0] = cmd.command;
-        for (int i = 0; i < cmd.args_counter; i++) {
-            args[i + 1] = cmd.args[i];
+        char *args[cmd->args_counter + 2]; /*+2 for the command and NULL terminator*/ 
+        args[0] = cmd->command;
+        for (i = 0; i < cmd->args_counter; i++) {
+            args[i + 1] = cmd->args[i];
         }
-        args[cmd.args_counter + 1] = NULL;
+        args[cmd->args_counter + 1] = NULL;
 
-        execvp(cmd.command, args);
+        execvp(cmd->command, args);
 
         /*If execvp returns, it means there was an error*/ 
         fprintf(log_file, "Exec failed");
         exit(EXIT_FAILURE);
     } else {
+        if
         /*Parent process*/ 
         int status;
         /*Waiting for the child process to finish*/ 
@@ -200,7 +204,7 @@ int exec_fore (struct Command *cmd){
 }
 
 
-int run_command (struct Command *cmd){
+void run_command (struct Command *cmd){
     fprintf(log_file, "\n\nrunning command: %s\n", cmd->command);
     int exit_status = 0;
 
@@ -216,21 +220,20 @@ int run_command (struct Command *cmd){
         /*run command in background*/
 
     } else {
-        printf("Error running command\n")
+        printf("Error running command\n");
     }
     
     return exit_status;
 }
 
 void cmd () {
-    int exit_status = 0;
     
-    while (exit_status != 1){
+    while (1 < 2){
         /*Get the command*/
         struct Command *cmd = get_command();
 
         /*run the command*/
-        exit_status = run_command(cmd);
+        run_command(cmd);
     }
 
     return;
