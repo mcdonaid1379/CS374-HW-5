@@ -153,10 +153,11 @@ struct Command *get_command () {
     return line;
 }
 
-void exit_smallsh () {
+void exit_smallsh (struct Command *cmd) {
     /*FIXME: Kill all other processes*/
     /*FIXME: fix exit needing to be called twice sometimes*/
     fprintf(log_file, "exit called\n");
+    free(cmd);
     exit(0);
 }
 
@@ -172,7 +173,7 @@ void run_built_in_command (struct Command *cmd) {
     if (strcmp(cmd->command, "cd") == 0){
         /*TODO: run cd*/
     } else if (strcmp(cmd->command, "exit") == 0){
-        exit_smallsh();
+        exit_smallsh(cmd);
     } else if (strcmp(cmd->command, "status") == 0){
         status();
     }
