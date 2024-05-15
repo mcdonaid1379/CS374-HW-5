@@ -14,6 +14,7 @@ void log_Command (struct Command *c){
     for (i = 0; i < c->args_counter; i++){
         fprintf(log_file, "arg%d: %s\n", i, c->args[i]);
     }
+    fprintf(log_file, "\nargument counter: %d", c->args_counter);
 
     fprintf(log_file, "\ninput file: %s", c->input_name);
     fprintf(log_file, "\noutput file: %s", c->output_name);
@@ -153,8 +154,8 @@ struct Command *get_command () {
 }
 
 void exit_smallsh () {
-    /*TODO: Kill all other processes*/
-    /*TODO: fix exit needing to be called twice sometimes*/
+    /*FIXME: Kill all other processes*/
+    /*FIXME: fix exit needing to be called twice sometimes*/
     fprintf(log_file, "exit called\n");
     exit(0);
 }
@@ -228,15 +229,15 @@ void sigchld_handler(int signum) {
 }
 
 void exec_back (struct Command *cmd){
-    /*TODO: Fix issue with arguments being truncated to 3 chars*/
-    int i;
+    int i, j;
     exit_status = 0;
 
+    fprintf(log_file, "running %s in the background \n", cmd->command);
     pid_t pid = fork();
 
     if (pid < 0) {
         /*fork failure*/
-        fprintf(log_file, "Fork failed");
+        fprintf(log_file, "\nFork failed");
         exit_status = 1;
     } else if (pid == 0) {
         /*Child process*/ 
@@ -245,17 +246,34 @@ void exec_back (struct Command *cmd){
         printf("Background Process PID: %d\n", current_pid);
         fflush(stdout);
         /*Constructing the argument list for execvp*/ 
-        char *args[cmd->args_counter + 2]; /*+2 for the command and NULL terminator*/ 
+        /*Dynamically allocate memory for args array*/ 
+        char **args = (char **)malloc((cmd->args_counter + 2) * sizeof(char *));
+        if (args == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(1);
+        }
+
+        /*Constructing the argument list for execvp*/ 
         args[0] = cmd->command;
         for (i = 0; i < cmd->args_counter; i++) {
-            args[i + 1] = cmd->args[i];
+            // Dynamically allocate memory for each argument
+            args[i + 1] = strdup(cmd->args[i]);
+            if (args[i + 1] == NULL) {
+                fprintf(stderr, "Memory allocation failed\n");
+                // Free allocated memory before exiting
+                for (j = 0; j <= i; j++) {
+                    free(args[j]);
+                }
+                free(args);
+                exit(1);
+            }
         }
         args[cmd->args_counter + 1] = NULL;
 
         execvp(cmd->command, args);
 
         /*If execvp returns, it means there was an error*/ 
-        fprintf(log_file, "Exec failed");
+        fprintf(log_file, "\nExec failed");
         exit_status = 1;
     } else {
         /*Parent process*/ 
