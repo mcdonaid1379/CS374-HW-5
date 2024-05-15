@@ -228,6 +228,7 @@ void sigchld_handler(int signum) {
 }
 
 void exec_back (struct Command *cmd){
+    /*TODO: Fix issue with arguments being truncated to 3 chars*/
     int i;
     exit_status = 0;
 
