@@ -37,6 +37,7 @@ struct Command *get_command ();
 void exit_smallsh ();
 void run_built_in_command (struct Command *cmd);
 void exec_fore (struct Command *cmd);
+void sigchld_handler(int signum);
 void exec_back (struct Command *cmd);
 void run_command (struct Command *cmd);
 void cmd ();

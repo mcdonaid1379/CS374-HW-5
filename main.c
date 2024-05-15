@@ -102,7 +102,7 @@ struct Command *get_command () {
 
             continue;
 
-        } else if (strcmp(token, "&\n") == 0) {
+        } else if (strcmp(token, "&") == 0) {
             fprintf(log_file, "& parsed\n");
 
             /*sets the background process status to 1 indicating an & is present*/
@@ -154,7 +154,7 @@ struct Command *get_command () {
 
 void exit_smallsh () {
     /*TODO: Kill all other processes*/
-    /*TODO: fix exit needing to be called twice*/
+    /*TODO: fix exit needing to be called twice sometimes*/
     fprintf(log_file, "exit called\n");
     exit(0);
 }
@@ -192,6 +192,7 @@ void exec_fore (struct Command *cmd){
     } else if (pid == 0) {
         /*Child process*/ 
         /*Constructing the argument list for execvp*/ 
+        /**/
         char *args[cmd->args_counter + 2]; /*+2 for the command and NULL terminator*/ 
         args[0] = cmd->command;
         for (i = 0; i < cmd->args_counter; i++) {
@@ -211,6 +212,19 @@ void exec_fore (struct Command *cmd){
         waitpid(pid, &status, 0);
     }
 
+}
+
+void sigchld_handler(int signum) {
+    int status;
+    pid_t pid;
+    
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        if (WIFEXITED(status)) {
+            printf("Background Process with PID %d completed.\n", pid);
+        } else {
+            printf("Background Process with PID %d terminated abnormally.\n", pid);
+        }
+    }
 }
 
 void exec_back (struct Command *cmd){
@@ -244,9 +258,10 @@ void exec_back (struct Command *cmd){
         exit_status = 1;
     } else {
         /*Parent process*/ 
-        int status;
-        /*Waiting for the child process to finish*/ 
-        waitpid(pid, &status, 0);
+        /*set up handler for SIGCHLD when the child terminates*/
+        signal(SIGCHLD, sigchld_handler);
+
+        return;
     }
 
 }
@@ -264,6 +279,7 @@ void run_command (struct Command *cmd){
 
     } else if (cmd->background == 1){
         /*run command in background*/
+        exec_back(cmd);
 
     } else {
         printf("Error running command\n");
