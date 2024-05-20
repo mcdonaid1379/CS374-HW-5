@@ -167,11 +167,17 @@ void status () {
     return;
 }
 
+void cd (struct Command *cmd) {
+    fprintf(log_file, "cd called\nchanging directory to %s\n", cmd->args[0]);
+    chdir(cmd->args[0]);
+    return;
+}
+
 void run_built_in_command (struct Command *cmd) {
     fprintf(log_file, "running built in command: %s\n", cmd->command);
 
     if (strcmp(cmd->command, "cd") == 0){
-        /*TODO: run cd*/
+        cd(cmd);
     } else if (strcmp(cmd->command, "exit") == 0){
         exit_smallsh(cmd);
     } else if (strcmp(cmd->command, "status") == 0){
