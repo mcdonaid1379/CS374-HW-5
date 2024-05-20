@@ -181,6 +181,28 @@ void run_built_in_command (struct Command *cmd) {
     return;
 }
 
+
+void fore_SIGINT_handler () {
+    printf("SIGINT intercepted in foreground function\n");
+    exit(1);
+    return;
+}
+
+void fore_sigchld_handler () {
+    int status;
+    pid_t pid;
+    
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        /*handles the case of SIGINT during foreground process*/
+        /*FIXME: potential issue being called with both foreground and background*/
+        int signal_num = WTERMSIG(status);
+        if (signal_num == SIGINT) {
+            printf("Foreground child process %d was terminated by signal number %d\n", pid, signal_num);
+        }
+    }
+}
+
+
 void exec_fore (struct Command *cmd){
     int i;
     exit_status = 0;
@@ -193,14 +215,18 @@ void exec_fore (struct Command *cmd){
         exit_status = 1;
     } else if (pid == 0) {
         /*Child process*/ 
+
         /*Constructing the argument list for execvp*/ 
-        /**/
         char *args[cmd->args_counter + 2]; /*+2 for the command and NULL terminator*/ 
         args[0] = cmd->command;
         for (i = 0; i < cmd->args_counter; i++) {
             args[i + 1] = cmd->args[i];
         }
         args[cmd->args_counter + 1] = NULL;
+
+        /*child process signal handler*/
+        /*FIXME: does not currently work, is overridden by previous signal*/
+        signal(SIGINT, fore_SIGINT_handler);
 
         execvp(cmd->command, args);
 
@@ -210,6 +236,9 @@ void exec_fore (struct Command *cmd){
     } else {
         /*Parent process*/ 
         int status;
+        /*Signal handler for SIGINT reporting*/
+        signal(SIGCHLD, fore_sigchld_handler);
+
         /*Waiting for the child process to finish*/ 
         waitpid(pid, &status, 0);
     }
@@ -336,8 +365,15 @@ void init_log_file(){
     return;
 }
 
+void SIGINT_handler () {
+    fprintf(log_file, "SIGINT ignored by main process\n");
+    return;
+}
+
 int main () {
     init_log_file();
+
+    signal(SIGINT, SIGINT_handler);
     
     printf("$ smallsh\n");
     fflush(stdout);
