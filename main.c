@@ -30,6 +30,29 @@ void remove_newline(char *str) {
     }
 }
 
+void expand_variables(struct Command *cmd) {
+    int i;
+    pid_t pid = getpid();
+    char pid_str[MAX_PID_LENGTH + 1]; // +1 for null terminator
+    char *found;
+
+    // Convert PID to string
+    sprintf(pid_str, "%d", pid);
+    int pid_length = strlen(pid_str);
+
+    for (i = 0; i < cmd->args_counter; i++) {
+        found = strstr(cmd->args[i], "$$");
+
+        while (found != NULL) {
+            memmove(found + pid_length, found + 2, (strlen(found) - strlen("$$")) + 1); // +1 for null terminator
+            memcpy(found, pid_str, pid_length);
+
+            found = strstr(found + pid_length, "$$"); // Find next occurrence
+        }
+    }
+}
+
+
 
 struct Command *get_command () {
     char input[MAX_LENGTH];
@@ -350,6 +373,9 @@ void cmd () {
     while (1 < 2){
         /*Get the command*/
         struct Command *cmd = get_command();
+
+        /*exapnds all the $$ to the current pid*/
+        expand_variables(cmd);
 
         /*run the command*/
         run_command(cmd);

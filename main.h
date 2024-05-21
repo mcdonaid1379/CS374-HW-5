@@ -12,6 +12,8 @@
 #include <signal.h>
 #include <bits/waitflags.h>
 
+#define MAX_PID_LENGTH 10 
+
 #define MAX_LENGTH 2048
 
 /*Command struct is where the input from the command line will be stored*/
