@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <bits/waitflags.h>
+#include <errno.h>
+#include <fcntl.h>
 
 #define MAX_PID_LENGTH 10 
 
@@ -27,7 +29,7 @@ struct Command {
     char *input_name;
     FILE *input_file;
     char *output_name;
-    FILE *output_file;
+    int output_file;
     /*0 if there is no & and 1 if there is*/
     int background;
     /*0 if there is no # and 1 if there is*/

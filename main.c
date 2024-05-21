@@ -44,7 +44,8 @@ void expand_variables(struct Command *cmd) {
         found = strstr(cmd->args[i], "$$");
 
         while (found != NULL) {
-            memmove(found + pid_length, found + 2, (strlen(found) - strlen("$$")) + 1); // +1 for null terminator
+            memmove(found + pid_length, found + 2, strlen(found + 2) + 1);
+            //memmove(found + pid_length, found + 2, (strlen(found) - strlen("$$")) + 1); // +1 for null terminator
             memcpy(found, pid_str, pid_length);
 
             found = strstr(found + pid_length, "$$"); // Find next occurrence
@@ -110,14 +111,14 @@ struct Command *get_command () {
             line->output_name = token;
             
             /*store FILE* in line from fopen*/
-            line->output_file = fopen(line->output_name, "w");
+            line->output_file = open(line->output_name, O_WRONLY | O_CREAT | O_TRUNC, 0666); 
 
             /*checks if the file exists*/
-            if (line->output_file == NULL){
+            if (line->output_file == -1){
                 printf("cannot open %s for output\n", token);
                 fflush(stdout);
             } else {
-                fprintf(log_file, "File %s successfully opened\n", line->output_name);
+                fprintf(log_file, "File %s successfully opened with fd: %d\n", line->output_name, line->output_file);
             }
 
             /*reads the next token*/
@@ -211,26 +212,29 @@ void run_built_in_command (struct Command *cmd) {
 }
 
 
-void fore_SIGINT_handler () {
+/*void fore_SIGINT_handler () {
     printf("SIGINT intercepted in foreground function\n");
+    fflush(stdout);
     exit(1);
     return;
 }
-
+*/
+/*
 void fore_sigchld_handler () {
     int status;
     pid_t pid;
     
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        /*handles the case of SIGINT during foreground process*/
-        /*FIXME: potential issue being called with both foreground and background*/
+        handles the case of SIGINT during foreground process
+        FIXME: potential issue being called with both foreground and background
         int signal_num = WTERMSIG(status);
         if (signal_num == SIGINT) {
             printf("Foreground child process %d was terminated by signal number %d\n", pid, signal_num);
+            fflush(stdout);
         }
     }
 }
-
+*/
 
 void exec_fore (struct Command *cmd){
     int i;
@@ -255,7 +259,15 @@ void exec_fore (struct Command *cmd){
 
         /*child process signal handler*/
         /*FIXME: does not currently work, is overridden by previous signal*/
-        signal(SIGINT, fore_SIGINT_handler);
+        //signal(SIGINT, fore_SIGINT_handler);
+
+        //TODO: I/O
+        if (cmd->output_file){
+            if (cmd->output_file != -1){
+                dup2(cmd->output_file, STDOUT_FILENO);
+                dup2(cmd->output_file, STDERR_FILENO);
+            }
+        }
 
         execvp(cmd->command, args);
 
@@ -266,7 +278,7 @@ void exec_fore (struct Command *cmd){
         /*Parent process*/ 
         int status;
         /*Signal handler for SIGINT reporting*/
-        signal(SIGCHLD, fore_sigchld_handler);
+        //signal(SIGCHLD, fore_sigchld_handler);
 
         /*Waiting for the child process to finish*/ 
         waitpid(pid, &status, 0);
@@ -281,8 +293,10 @@ void sigchld_handler(int signum) {
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         if (WIFEXITED(status)) {
             printf("Background Process with PID %d completed.\n", pid);
+            fflush(stdout);
         } else {
             printf("Background Process with PID %d terminated abnormally.\n", pid);
+            fflush(stdout);
         }
     }
 }
