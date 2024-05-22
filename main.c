@@ -21,7 +21,7 @@ void log_Command (struct Command *c){
     fprintf(log_file, "\ninput file: %s", c->input_name);
     fprintf(log_file, "\noutput file: %s", c->output_name);
     fprintf(log_file, "\nbackground process status: %d", c->background);
-    fprintf(log_file, "\ncomment status: %d", c->comment);
+    fprintf(log_file, "\ncomment status: %d\n", c->comment);
 
 }
 
@@ -31,6 +31,7 @@ void remove_newline(char *str) {
         str[len - 1] = '\0';
     }
 }
+
 
 void expand_variables(struct Command *cmd) {
     int i;
@@ -66,6 +67,7 @@ struct Command *get_command () {
     line->args_counter = 0;
     line->background = 0;
     line->comment = 0;
+    line->args = (char **)malloc(sizeof(char*) * (MAX_ARGS + 1)); 
     fprintf(log_file, "\n\ncommand for line struct memory allocated successfully and default values set\n");
 
 
@@ -183,6 +185,8 @@ struct Command *get_command () {
         
     }
 
+    line->args[line->args_counter] = NULL; // Add NULL terminator
+
     log_Command(line);
 
     return line;
@@ -227,6 +231,9 @@ void exec_fore (struct Command *cmd){
     int i;
     exit_status = 0;
 
+    fprintf(log_file, "Logging in exec fore before the fork: \n");
+    log_Command(cmd);
+
     pid_t pid = fork();
 
     if (pid < 0) {
@@ -236,17 +243,24 @@ void exec_fore (struct Command *cmd){
     } else if (pid == 0) {
         /*Child process*/ 
 
-        /*Constructing the argument list for execvp*/
-        char *args[cmd->args_counter + 2]; /*+2 for the command and NULL terminator*/ 
-        args[0] = cmd->command;
-        for (i = 0; i < cmd->args_counter; i++) {
-            args[i + 1] = cmd->args[i];
-        }
-        args[cmd->args_counter + 1] = NULL;
+        fprintf(log_file, "Logging in exec fore before agument list construction: \n");
+        log_Command(cmd);
 
-        /*child process signal handler*/
-        /*FIXME: does not currently work, is overridden by previous signal*/
-        //signal(SIGINT, fore_SIGINT_handler);
+        // Deep copy the args array for the child process
+        char **newArgs = malloc(sizeof(char*) * (cmd->args_counter + 2)); // Allocate space for NULL terminator
+        newArgs[0] = strdup(cmd->command); // The first argument is the command itself
+        for(i = 0; i < cmd->args_counter; i++) { 
+            newArgs[i + 1] = strdup(cmd->args[i]);
+        }
+        newArgs[cmd->args_counter + 1] = NULL; // Terminate the argument list
+
+        // Replace cmd->args with newArgs
+        free(cmd->args);
+        cmd->args = newArgs;
+        
+
+        fprintf(log_file, "Logging in exec fore after agument list construction: \n");
+        log_Command(cmd);
 
         //redirects the ouput to the file if it has been opened
         if (cmd->output_file){
@@ -265,7 +279,13 @@ void exec_fore (struct Command *cmd){
             }
         }
 
-        execvp(cmd->command, args);
+        log_Command(cmd);
+
+        if (execvp(cmd->command, cmd->args) == -1) {
+            printf("execvp failed"); // Print error message to stderr
+            fflush(stdout);
+        } 
+        
 
         /*If execvp returns, it means there was an error*/ 
         fprintf(log_file, "Exec failed");
@@ -374,6 +394,9 @@ void exec_back (struct Command *cmd){
 void run_command (struct Command *cmd){
     fprintf(log_file, "\n\nrunning command: %s\n", cmd->command);
 
+    fprintf(log_file, "Logging in run_command: \n");
+    log_Command(cmd);
+
     /*check for built in commands*/
     if (strcmp(cmd->command, "cd") == 0 || strcmp(cmd->command, "exit") == 0 || strcmp(cmd->command, "status") == 0) {
         run_built_in_command(cmd);
@@ -400,8 +423,15 @@ void cmd () {
         /*Get the command*/
         struct Command *cmd = get_command();
 
+        fprintf(log_file, "Logging after get command - before expand: \n");
+        log_Command(cmd);
+
         /*exapnds all the $$ to the current pid*/
-        expand_variables(cmd);
+        //FIXME: removes the data in the struct
+        //expand_variables(cmd);
+
+        fprintf(log_file, "Logging after get command and expand: \n");
+        log_Command(cmd);
 
         /*run the command*/
         run_command(cmd);

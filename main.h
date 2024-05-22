@@ -18,12 +18,14 @@
 
 #define MAX_LENGTH 2048
 
+#define MAX_ARGS 512
+
 /*Command struct is where the input from the command line will be stored*/
 struct Command {
     /*initial command*/
     char *command;
     /*contains up to 512 args*/
-    char *args[512];
+    char **args;
     int args_counter;
     /*files for I/O*/
     char *input_name;
