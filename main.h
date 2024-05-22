@@ -18,6 +18,7 @@
 
 #define MAX_LENGTH 2048
 
+
 /*Command struct is where the input from the command line will be stored*/
 struct Command {
     /*initial command*/

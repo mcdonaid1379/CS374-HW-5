@@ -65,6 +65,7 @@ struct Command *get_command () {
     struct Command *line = (struct Command *)malloc(sizeof(struct Command));
     line->args_counter = 0;
     line->background = 0;
+    line->comment = 0;
     fprintf(log_file, "\n\ncommand for line struct memory allocated successfully and default values set\n");
 
 
@@ -182,6 +183,8 @@ struct Command *get_command () {
         
     }
 
+    line->args[line->args_counter] = NULL; // Add NULL terminator
+
     log_Command(line);
 
     return line;
@@ -221,30 +224,6 @@ void run_built_in_command (struct Command *cmd) {
     return;
 }
 
-
-/*void fore_SIGINT_handler () {
-    printf("SIGINT intercepted in foreground function\n");
-    fflush(stdout);
-    exit(1);
-    return;
-}
-*/
-/*
-void fore_sigchld_handler () {
-    int status;
-    pid_t pid;
-    
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        handles the case of SIGINT during foreground process
-        FIXME: potential issue being called with both foreground and background
-        int signal_num = WTERMSIG(status);
-        if (signal_num == SIGINT) {
-            printf("Foreground child process %d was terminated by signal number %d\n", pid, signal_num);
-            fflush(stdout);
-        }
-    }
-}
-*/
 
 void exec_fore (struct Command *cmd){
     int i;
