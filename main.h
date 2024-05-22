@@ -54,6 +54,7 @@ void run_command (struct Command *cmd);
 void cmd ();
 void init_log_file();
 void SIGINT_handler ();
+void SIGTSTP_handler ();
 int main ();
 
 #endif

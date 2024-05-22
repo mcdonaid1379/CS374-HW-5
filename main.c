@@ -3,6 +3,8 @@
 /*log file created globally as it will be needed in every function*/
 FILE *log_file;
 int exit_status;
+/*0 for disabled 1 for enabled*/
+volatile int foreground_only = 0;
 
 void log_Command (struct Command *c){
     int i;
@@ -130,8 +132,16 @@ struct Command *get_command () {
         } else if (strcmp(token, "&") == 0) {
             fprintf(log_file, "& parsed\n");
 
+
+            fprintf(log_file, "foreground only mode = %d\n", foreground_only);
             /*sets the background process status to 1 indicating an & is present*/
-            line->background = 1;
+            if (foreground_only == 1){
+                //dont switch to background process
+                line->background = 0;
+            } else {
+                line->background = 1;
+            }
+            fprintf(log_file, "background status = %d\n", line->background);
 
             /*reads the next token*/
             token = strtok(NULL, delim);
@@ -266,6 +276,7 @@ void exec_fore (struct Command *cmd){
             if (cmd->output_file != -1){
                 dup2(cmd->output_file, STDOUT_FILENO);
                 dup2(cmd->output_file, STDERR_FILENO);
+                close(cmd->output_file);
             }
         }
 
@@ -273,6 +284,7 @@ void exec_fore (struct Command *cmd){
         if (cmd->input_file){
             if (cmd->input_file != -1){
                 dup2(cmd->input_file, STDIN_FILENO);
+                close(cmd->input_file);
             }
         }
 
@@ -419,13 +431,29 @@ void init_log_file(){
 
 void SIGINT_handler () {
     fprintf(log_file, "SIGINT ignored by main process\n");
+    fflush(stdout);
     return;
+}
+
+void SIGTSTP_handler () {
+    fprintf(log_file, "SIGTSTP received\n");
+    if (foreground_only == 0){
+        foreground_only = 1;
+        printf("Enabling foreground only mode\n");
+        fflush(stdout);
+    } else {
+        foreground_only = 0;
+        printf("Disabling foreground only mode\n");
+        fflush(stdout);
+    }
 }
 
 int main () {
     init_log_file();
 
     signal(SIGINT, SIGINT_handler);
+
+    signal(SIGTSTP, SIGTSTP_handler);
     
     printf("$ smallsh\n");
     fflush(stdout);
