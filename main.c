@@ -87,14 +87,14 @@ struct Command *get_command () {
             line->input_name = token;
 
             /*store FILE* in line from fopen*/
-            line->input_file = fopen(line->input_name, "r");
+            line->input_file = open(line->input_name, O_RDONLY);
 
             /*checks if the file exists*/
-            if (line->input_file == NULL){
+            if (line->input_file == -1){
                 printf("cannot open %s for input\n", token);
                 fflush(stdout);
             } else {
-                fprintf(log_file, "File %s successfully opened\n", line->input_name);
+                fprintf(log_file, "File %s successfully opened fo input with fd: %d\n", line->input_name, line->input_file);
             }
 
             /*reads the next token*/
@@ -118,7 +118,7 @@ struct Command *get_command () {
                 printf("cannot open %s for output\n", token);
                 fflush(stdout);
             } else {
-                fprintf(log_file, "File %s successfully opened with fd: %d\n", line->output_name, line->output_file);
+                fprintf(log_file, "File %s successfully opened for output with fd: %d\n", line->output_name, line->output_file);
             }
 
             /*reads the next token*/
@@ -261,11 +261,18 @@ void exec_fore (struct Command *cmd){
         /*FIXME: does not currently work, is overridden by previous signal*/
         //signal(SIGINT, fore_SIGINT_handler);
 
-        //TODO: I/O
+        //redirects the ouput to the file if it has been opened
         if (cmd->output_file){
             if (cmd->output_file != -1){
                 dup2(cmd->output_file, STDOUT_FILENO);
                 dup2(cmd->output_file, STDERR_FILENO);
+            }
+        }
+
+        //redirects the input
+        if (cmd->input_file){
+            if (cmd->input_file != -1){
+                dup2(cmd->input_file, STDIN_FILENO);
             }
         }
 
@@ -357,7 +364,6 @@ void exec_back (struct Command *cmd){
     }
 
 }
-
 
 void run_command (struct Command *cmd){
     fprintf(log_file, "\n\nrunning command: %s\n", cmd->command);

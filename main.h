@@ -27,8 +27,10 @@ struct Command {
     int args_counter;
     /*files for I/O*/
     char *input_name;
-    FILE *input_file;
+    /*fd of input file*/
+    int input_file;
     char *output_name;
+    /*fd of output file*/
     int output_file;
     /*0 if there is no & and 1 if there is*/
     int background;
@@ -36,10 +38,14 @@ struct Command {
     int comment;
 };
 
+//FIXME: add all new functions
 void log_Command (struct Command *c);
 void remove_newline(char *str);
+void expand_variables(struct Command *cmd);
 struct Command *get_command ();
 void exit_smallsh (struct Command *cmd);
+void status ();
+void cd (struct Command *cmd);
 void run_built_in_command (struct Command *cmd);
 void exec_fore (struct Command *cmd);
 void sigchld_handler(int signum);
@@ -47,7 +53,7 @@ void exec_back (struct Command *cmd);
 void run_command (struct Command *cmd);
 void cmd ();
 void init_log_file();
+void SIGINT_handler ();
 int main ();
-struct Command *get_command ();
 
 #endif
