@@ -183,8 +183,6 @@ struct Command *get_command () {
         
     }
 
-    line->args[line->args_counter] = NULL; // Add NULL terminator
-
     log_Command(line);
 
     return line;
@@ -238,7 +236,7 @@ void exec_fore (struct Command *cmd){
     } else if (pid == 0) {
         /*Child process*/ 
 
-        /*Constructing the argument list for execvp*/ 
+        /*Constructing the argument list for execvp*/
         char *args[cmd->args_counter + 2]; /*+2 for the command and NULL terminator*/ 
         args[0] = cmd->command;
         for (i = 0; i < cmd->args_counter; i++) {
@@ -340,6 +338,23 @@ void exec_back (struct Command *cmd){
             }
         }
         args[cmd->args_counter + 1] = NULL;
+
+        //redirects the ouput to the file if it has been opened
+        if (cmd->output_file){
+            if (cmd->output_file != -1){
+                dup2(cmd->output_file, STDOUT_FILENO);
+                dup2(cmd->output_file, STDERR_FILENO);
+                close(cmd->output_file);
+            }
+        }
+
+        //redirects the input
+        if (cmd->input_file){
+            if (cmd->input_file != -1){
+                dup2(cmd->input_file, STDIN_FILENO);
+                close(cmd->input_file);
+            }
+        }
 
         execvp(cmd->command, args);
 
