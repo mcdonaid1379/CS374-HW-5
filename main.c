@@ -32,7 +32,37 @@ void remove_newline(char *str) {
     }
 }
 
+void expand_variables(struct Command *cmd) {
+    int i;
+    pid_t pid = getpid();
+    char pid_str[MAX_PID_LENGTH + 1];
+    char *found;
 
+    sprintf(pid_str, "%d", pid);
+    size_t pid_length = strlen(pid_str);
+    
+    
+    for (i = 0; i < cmd->args_counter; i++) {
+        found = strstr(cmd->args[i], "$$");
+
+        while (found != NULL) {
+            fprintf(log_file, "$$ found\n");
+            size_t remaining_length = strlen(found + 2);  // Length of data after "$$"
+            memmove(found + pid_length, found + 2, remaining_length + 1); // Move remaining data
+            memcpy(found, pid_str, pid_length);  // Insert PID
+
+            found = strstr(found + pid_length, "$$"); // Find next occurrence
+        }
+
+        //extra check to be sure that found is reset
+        found = NULL;
+    }
+    
+}
+
+
+
+/*
 void expand_variables(struct Command *cmd) {
     int i;
     pid_t pid = getpid();
@@ -55,7 +85,7 @@ void expand_variables(struct Command *cmd) {
         }
     }
 }
-
+*/
 
 
 struct Command *get_command () {
@@ -231,9 +261,6 @@ void exec_fore (struct Command *cmd){
     int i;
     exit_status = 0;
 
-    fprintf(log_file, "Logging in exec fore before the fork: \n");
-    log_Command(cmd);
-
     pid_t pid = fork();
 
     if (pid < 0) {
@@ -242,9 +269,6 @@ void exec_fore (struct Command *cmd){
         exit_status = 1;
     } else if (pid == 0) {
         /*Child process*/ 
-
-        fprintf(log_file, "Logging in exec fore before agument list construction: \n");
-        log_Command(cmd);
 
         // Deep copy the args array for the child process
         char **newArgs = malloc(sizeof(char*) * (cmd->args_counter + 2)); // Allocate space for NULL terminator
@@ -282,7 +306,7 @@ void exec_fore (struct Command *cmd){
         log_Command(cmd);
 
         if (execvp(cmd->command, cmd->args) == -1) {
-            printf("execvp failed"); // Print error message to stderr
+            fprintf(log_file, "execvp failed"); // Print error message to stderr
             fflush(stdout);
         } 
         
@@ -394,8 +418,6 @@ void exec_back (struct Command *cmd){
 void run_command (struct Command *cmd){
     fprintf(log_file, "\n\nrunning command: %s\n", cmd->command);
 
-    fprintf(log_file, "Logging in run_command: \n");
-    log_Command(cmd);
 
     /*check for built in commands*/
     if (strcmp(cmd->command, "cd") == 0 || strcmp(cmd->command, "exit") == 0 || strcmp(cmd->command, "status") == 0) {
@@ -428,7 +450,7 @@ void cmd () {
 
         /*exapnds all the $$ to the current pid*/
         //FIXME: removes the data in the struct
-        //expand_variables(cmd);
+        expand_variables(cmd);
 
         fprintf(log_file, "Logging after get command and expand: \n");
         log_Command(cmd);
